@@ -1,0 +1,43 @@
+#SITE PARAMETERS
+lid_Site	Mbour
+lid_file	Mbour_532_yyyymmdd.txt
+lid_data	#
+lid_var	pr2   //pr2,lnpr2
+aer_Site	Dakar
+lambda	532
+#EXTRAPOLATION
+zmin	300
+type	cst	lin/cst
+#SPECTRAL FILTERING
+width	0.5
+#LAYERS
+nprol	20
+width	210
+thr_cloud	-100
+zmin_bl	330
+zmax_bl	3000
+zmax_tl	5000
+thr_tl	1.0
+#CLOUDING
+nproc	10
+thr1	10
+thr2	4
+#REF ALTITUDE
+Z1	4000
+Z2	6000
+#INVERSION
+ntime	60
+beta_a(zref)	2E-8
+theta	00
+#DISPLAY
+min_pr2	20
+max_pr2	500
+min_ext	0
+max_ext	0.05
+min_aod	0
+max_aod	0.10
+min_ext2	-0.005	#figure3
+max_ext2	0.10
+min_aod2	0
+max_aod2	0.3
+fmt png // png,jpg,bmp

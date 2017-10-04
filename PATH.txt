@@ -1,0 +1,7 @@
+/Users/mortier/Desktop/BASIC_work/git/BASIC/parameters/
+/Users/mortier/Desktop/BASIC_work/git/BASIC/library/
+/Users/mortier/Desktop/BASIC_work/git/BASIC/data/LID/
+/Users/mortier/Desktop/BASIC_work/git/BASIC/data/AER/
+/Users/mortier/Desktop/BASIC_work/git/BASIC/out/
+/Users/mortier/Desktop/BASIC_work/git/BASIC/fig/
+
