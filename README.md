@@ -115,4 +115,6 @@ max_ext Auto / float
 min_aod Auto / float
 max_aod Auto / float
 fmt png/jpg/bmp : format of pictures exportation. In some configurations, the only bmp format might work under MacOS 
+#PATCH CEILO
+patch_ceilo=0 : set to 1 to enable improvements when using ceilometer data
 ```
