@@ -17,7 +17,6 @@ thr_cloud	-100
 zmin_bl	510
 zmax_bl	3000
 zmax_tl	5000
-thr_tl	1.5
 #CLOUDING
 nproc	10
 thr1	5
@@ -41,3 +40,5 @@ max_ext2	0.10
 min_aod2	0
 max_aod2	0.3
 fmt png // png,jpg,bmp
+#PATCH CEILO
+patch_ceilo	1 //1 to be activated

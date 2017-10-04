@@ -36,3 +36,5 @@ max_ext	Auto
 min_aod	0
 max_aod Auto
 fmt bmp // png,jpg,bmp
+#PATCH CEILO
+patch_ceilo	0 //1 to be activated

@@ -37,11 +37,32 @@ z2=params.z2;
 beta_a_zref=params.beta_a_zref;
 ntime=params.ntime;
 theta=params.theta;
+patch_ceilo=params.patch_ceilo;
 
 aod=aer.aod;
 aod_time=aer.time;
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 
+
+
+if patch_ceilo==1 then
+    mprintf('%s\t','Saturation Patch')
+    try
+    // - - - - - - - - - - - - - - - - - - - - - - - - 
+    //           Jenoptik Saturation Patch             
+    // - - - - - - - - - - - - - - - - - - - - - - - - 
+    patch_zmax=8000;patch_thr=2e3;
+    pr2_sat=saturation(z,pr2,patch_zmax,zmin_bl,patch_thr);
+    pr2=pr2_sat;
+    
+    // - - - - - - - - - - - - - - - - - - - - - - - - 
+    // - - - - - - - - - - - - - - - - - - - - - - - - 
+    mprintf('%s\n','√')
+    catch
+    mprintf('%s\n','X')
+    exit
+    end
+end
 
 
 mprintf('%s\t','Molecular simulation')
@@ -58,14 +79,20 @@ pr2_mol=bmol.*trayleigh;
 mprintf('%s\n','√')
 catch
 mprintf('%s\n','X')
-abort
+exit
 end
 
 
-// on limite la puissance de 10 du pr2
-power=floor(log10(nanmean(lid.pr2(100:150,:))));
-pr2=pr2*10^(-real(power)+1);
 
+
+
+
+//// on limite la puissance de 10 du pr2
+//power=floor(log10(nanmean(lid.pr2(100:150,:))));
+//pr2=pr2*10^(-real(power)+1);
+
+
+pr2_rec=pr2;
 
 mprintf('%s\t','Spectral filtering')
 try
@@ -75,12 +102,22 @@ try
 //on s'assure que le nb d'altitude est pair
 if size(pr2,1)/2<>round(size(pr2,1)/2) then
     pr2=pr2(1:$-1,:);
+    z=z(1:$-1);
 end
 pr2_f=pr2;
 pr2_f(1:zmin/vresol,:)=ones(zmin/vresol,1)*pr2_f((zmin/vresol)+1,:);
 if width_f>0 then
     for i=1:size(pr2,2)
-        pr2_f(:,i) = filtrage_spectral(pr2(:,i),width_f);
+        if patch_ceilo==1 then
+            if pr2(6,i)<1E7 then
+                pr2_f(1:zmin/vresol,i)=pr2_f((zmin/vresol)+1,i);
+                filtr=filtrage_spectral(pr2(:,i),0.5);
+                pr2_f(1:length(filtr),i) = filtr;
+                pr2(1:zmin/vresol,i)=pr2((zmin/vresol)+1,i);
+            end
+        else
+            pr2_f(:,i) = filtrage_spectral(pr2(:,i),width_f);
+        end
     end
     pr2=real(pr2_f);
 end
@@ -89,7 +126,7 @@ end
 mprintf('%s\n','√')
 catch
 mprintf('%s\n','X')
-abort
+exit
 end
 
 
@@ -125,7 +162,7 @@ try
 mprintf('%s\n','√')
 catch
 mprintf('%s\n','X')
-abort
+exit
 end
 
 
@@ -192,7 +229,7 @@ end
 mprintf('%s\n','√')
 catch
 mprintf('%s\n','X')
-abort
+exit
 end
 
 
@@ -227,87 +264,110 @@ end
 
 
 
+// - - - - -  - - - - - -  - - - - - - - - - - - 
+// - - - - - - - - PATCH RAIN - - - - - - - - -  -
+if patch_ceilo==1 then
+    //* * * * * * * * * * * * * * * * *
+    // add thr for Oslo rain
+    thrain=1000
+    irain=zeros(1,size(pr2,2));
+    for i=1:size(pr2,2)
+        if pr2(6,i)>=thrain then
+            nbcld(i)=1;
+            BASE2(1,i)=z(1);
+            PEAK2(1,i)=z(2);
+            TOP2(1,i)=tl(i);
+            irain(i)=1;
+        end
+    end
+    
+    // condensation?
+    thrcon=0;
+    icon=zeros(1,size(pr2,2));
+    for i=1:size(pr2,2)
+        if max(pr2(1:6,i))<=thrcon then
+            nbcld(i)=1;
+            BASE2(1,i)=z(1);
+            PEAK2(1,i)=z(2);
+            TOP2(1,i)=bl(i);
+            icon(i)=1;
+        end
+    end
+    // * * * * * * * * * * * * * * * *
+else
+    irain=zeros(1,size(pr2,2));
+end
 
-mprintf('%s\t\t','Inversion')
+
+
+//build a vector flagcld which contains 0 (no cloud) or altitude of the first cloud in the column
+ind_sun=BASE2(1,:);
+ind_sun=find(isnan(ind_sun)==%F);
+flagcld=zeros(lid_time);
+flagcld(ind_sun)=BASE2(1,ind_sun)';
+
+//number of clouds in each profile
+nbcld=zeros(1,size(BASE2,2));
+for i=1:size(BASE2,2)
+   nbcld(i)=length(find(BASE2(:,i)>0));
+end
+// - - - - -  - - - - - -  - - - - - - - - - - - 
+// - - - - -  - - - - - -  - - - - - - - - - - - 
+
+
+mprintf('%s\t','Spectral filtering')
 try
 // - - - - - - - - - - - - - - - - - - - - - - - - 
-//               INVERSION                  
+//              Spectral Filtering                 
 // - - - - - - - - - - - - - - - - - - - - - - - - 
-nb_tot=[];nb_ok=[];ZREF=[];SA=[];BETA_A=[];
-BL=[];TL=[];SI=[];
-
-
-//for each aod, average of pr2 during ntime then ref altitude then klett
-for i=1:length(aod)
-    
-    //average of pr2
-    ind=find(lid_time<aod_time(i)+ntime/(2*0.6*100) & lid_time>aod_time(i)-ntime/(2*0.6*100));
-    nb_tot=[nb_tot,length(ind)];
-    
-    //check if clouds in profiles
-    ind_clear=find(flagcld(ind)==0);
-    ind_cloudover=find(flagcld(ind)>z2);
-    ind_ok=ind(gsort([ind_clear,ind_cloudover],'c','i'));
-    
-    if length(ind_ok)>0 then
-    //if length(ind_ok)==nb_tot(i) then
-        
-        //number of profiles used in inversion
-        nb_ok=[nb_ok,length(ind_ok)];
-        
-        //average of non cloudy profiles
-        pr2_inv=mean(pr2(:,ind_ok),'c');
-        
-        //bl and tl for profiles
-        BL=[BL,nanmean(bl(ind_ok))];
-        TL=[TL,nanmean(tl(ind_ok))];
-        
-        //slope index for profiles
-        SI=[SI,nanmean(si(ind_ok))];
-        
-        
-        // - - - - - - - - - - - - - - - - - - - - - - - -
-        //                Reference Altitude              
-        // - - - - - - - - - - - - - - - - - - - - - - - -
-        pas=5;
-        [zref]=f_Zref(pr2_inv,z,z1,z2,pas);
-        ZREF=[ZREF,zref];
-        // - - - - - - - - - - - - - - - - - - - - - - - - 
-        
-        
-        // - - - - - - - - - - - - - - - - - - - - - - - - 
-        // KLETT Inversion
-        // - - - - - - - - - - - - - - - - - - - - - - - - 
-        if inv_mod=="aod" then
-            [beta_a,sa,xx,err_aod]=Inv_Klett_aod(pr2_inv,bmol,aod(i),zref,zmin,beta_a_zref,vresol,theta,extrap_typ);
-        end
-        if inv_mod=="sa" then
-            [beta_a,sa,aod(i),err_aod]=Inv_Klett_sa(pr2_inv,bmol,aod(i),zref,zmin,beta_a_zref,vresol,theta,sa_apriori,extrap_typ);
-        end
-        
-        
-        beta_a(length(beta_a):z2/vresol)=0;
-        BETA_A=[BETA_A,real(beta_a)];
-        SA=[SA,sa];
-
-        //
-        // - - - - - - - - - - - - - - - - - - - - - - - - 
-
-        
-    else
-        nb_ok=[nb_ok,0];
-        BL=[BL,nanmean(bl(ind))];
-        TL=[TL,nanmean(tl(ind))];
-        ZREF=[ZREF,0]
-        BETA_A=[BETA_A,zeros(z2/vresol,1)];
-        SA=[SA,0];
-        SI=[SI,-999];
-        
-    end
+//on s'assure que le nb d'altitude est pair
+if size(pr2,1)/2<>round(size(pr2,1)/2) then
+    pr2=pr2(1:$-1,:);
+    z=z(1:$-1);
 end
-//extinction (in km-1)
-ALPHA_A=BETA_A.*(ones(size(BETA_A,1),1)*SA)*1E3;
-aod=real(aod);
+pr2_f=pr2;
+if width_f>0 then
+    for i=1:size(pr2,2)
+        //rain patch
+        if pr2(6,i)<1E7 then
+            pr2_f(1:zmin/vresol,i)=pr2_f((zmin/vresol)+1,i);
+            filtr=filtrage_spectral(pr2(:,i),width_f);
+            pr2_f(1:length(filtr),i) = filtr;
+            pr2(1:zmin/vresol,i)=pr2((zmin/vresol)+1,i);
+        else
+            //pr2_f(1:zmin/vresol,i)=pr2_f((zmin/vresol)+1,i);
+            filtr=filtrage_spectral(pr2(:,i),width_f);
+            pr2_f(round(1000/vresol):length(filtr),i) = filtr(round(1000/vresol):$);
+            //pr2(1:zmin/vresol,i)=pr2((zmin/vresol)+1,i);
+        end
+    end
+    pr2=real(pr2_f);
+    
+    if patch_ceilo==1 then
+        //patch ceilo  : high value at top (noise)
+        pr2(1025:$,:)=pr2_rec(1025:$,:);
+    end
+    
+end
+
+// - - - - - - - - - - - - - - - - - - - - - - - - 
+// - - - - - - - - - - - - - - - - - - - - - - - - 
+mprintf('%s\n','√')
+catch
+mprintf('%s\n','X')
+exit
+end
+
+
+mprintf('%s\t\t','Extrapolation')
+try
+// - - - - - - - - - - - - - - - - - - - - - - - - 
+//           Extrapolation low altitude           
+// - - - - - - - - - - - - - - - - - - - - - - - - 
+// input : pr2,z,zmin,typ (cst/lin)
+if zmin>0 then
+    [pr2]=extrap(pr2,z,zmin,extrap_typ);
+end
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 mprintf('%s\n','√')
@@ -318,21 +378,166 @@ end
 
 
 
+mprintf('%s\t\t','Inversion')
+try
+// - - - - - - - - - - - - - - - - - - - - - - - -
+//               INVERSION
+// - - - - - - - - - - - - - - - - - - - - - - - -
+nb_tot=[];nb_ok=[];ZREF=[];SA=[];BETA_A=[];
+BL=[];TL=[];SI=[];
+
+
+//for each aod, average of pr2 during ntime then ref altitude then klett
+for i=1:length(aod)
+
+    //average of pr2
+    ind=find(lid_time<aod_time(i)+ntime/(2*0.6*100) & lid_time>aod_time(i)-ntime/(2*0.6*100));
+    nb_tot=[nb_tot,length(ind)];
+
+    //check if clouds in profiles
+    ind_clear=find(flagcld(ind)==0);
+    ind_cloudover=find(flagcld(ind)>z2);
+    ind_ok=ind(gsort([ind_clear,ind_cloudover],'c','i'));
+
+    if length(ind_ok)>0 then
+//        disp('aerosol')
+        //number of profiles used in inversion
+        nb_ok=[nb_ok,length(ind_ok)];
+
+        //average of non cloudy profiles
+        pr2_inv=mean(pr2(:,ind_ok),'c');
+
+        //bl and tl for profiles
+        BL=[BL,nanmean(bl(ind_ok))];
+        TL=[TL,nanmean(tl(ind_ok))];
+
+        //slope index for profiles
+        SI=[SI,nanmean(si(ind_ok))];
+
+
+        // - - - - - - - - - - - - - - - - - - - - - - - -
+        //                Reference Altitude
+        // - - - - - - - - - - - - - - - - - - - - - - - -
+        pas=5;
+        [zref]=f_Zref(pr2_inv,z,z1,z2,pas);
+        ZREF=[ZREF,zref];
+        // - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+        // - - - - - - - - - - - - - - - - - - - - - - - -
+        // KLETT Inversion
+        // - - - - - - - - - - - - - - - - - - - - - - - -
+        if inv_mod=="aod" then
+            zmin_inv=z(1);//not used
+            [beta_a,sa,xx,err_aod]=Inv_Klett_aod(pr2_inv,bmol,aod(i),zref,zmin_inv,beta_a_zref,vresol,theta,extrap_typ);
+        end
+        if inv_mod=="sa" then
+            zmin_inv=z(1);//not used
+            [beta_a,sa,aod(i),err_aod]=Inv_Klett_sa(pr2_inv,bmol,aod(i),zref,zmin_inv,beta_a_zref,vresol,theta,sa_apriori,extrap_typ);
+        end
+
+
+
+        beta_a(length(beta_a):z2/vresol)=0;
+        BETA_A=[BETA_A,real(beta_a)];
+        SA=[SA,sa];
+        //
+        // - - - - - - - - - - - - - - - - - - - - - - - -
+
+    else
+        if  sum(irain(ind))==0 then
+//          disp('cloud but no rain')
+            //if just clouds, but no rain inverse anyway
+
+            // * * * * * * * * * * * * * * * * * * * * * *
+            //number of profiles used in inversion
+            nb_ok=[nb_ok,length(ind_ok)];
+
+            //average of non cloudy profiles
+            pr2_inv=mean(pr2(:,ind),'c');
+
+            //bl and tl for profiles
+            BL=[BL,nanmean(bl(ind))];
+            TL=[TL,nanmean(tl(ind))];
+
+            //slope index for profiles
+            SI=[SI,nanmean(si(ind))];
+
+
+            // - - - - - - - - - - - - - - - - - - - - - - - -
+            //                Reference Altitude
+            // - - - - - - - - - - - - - - - - - - - - - - - -
+            pas=5;
+            [zref]=f_Zref(pr2_inv,z,z1,z2,pas);
+            ZREF=[ZREF,zref];
+            // - - - - - - - - - - - - - - - - - - - - - - - -
+
+
+        if nanmean(pr2_inv)<>0 then
+            // - - - - - - - - - - - - - - - - - - - - - - - - 
+            // KLETT Inversion
+            // - - - - - - - - - - - - - - - - - - - - - - - - 
+            if inv_mod=="aod" then
+                [beta_a,sa,xx,err_aod]=Inv_Klett_aod(pr2_inv,bmol,aod(i),zref,zmin,beta_a_zref,vresol,theta,extrap_typ);
+            end
+            if inv_mod=="sa" then
+                [beta_a,sa,aod(i),err_aod]=Inv_Klett_sa(pr2_inv,bmol,aod(i),zref,zmin,beta_a_zref,vresol,theta,sa_apriori,extrap_typ);
+            end
+        else
+            beta_a=zeros(z2/vresol,1);
+            sa=0;
+        end
+
+            beta_a(length(beta_a):z2/vresol)=0;
+            BETA_A=[BETA_A,real(beta_a)];
+            SA=[SA,sa];
+            //
+            // - - - - - - - - - - - - - - - - - - - - - - - -
+            // * * * * * * * * * * * * * * * * * * * * * *
+
+
+        else
+//            disp('rain')
+            nb_ok=[nb_ok,0];
+            BL=[BL,nanmean(bl(ind))];
+            TL=[TL,nanmean(tl(ind))];
+            ZREF=[ZREF,0]
+            BETA_A=[BETA_A,%nan*ones(z2/vresol,1)];
+            SA=[SA,%nan];
+            SI=[SI,-999];
+        end
+
+    end
+end
+//extinction (in km-1)
+ALPHA_A=BETA_A.*(ones(size(BETA_A,1),1)*SA)*1E3;
+aod=real(aod);
+// - - - - - - - - - - - - - - - - - - - - - - - -
+// - - - - - - - - - - - - - - - - - - - - - - - -
+mprintf('%s\n','√')
+catch
+mprintf('%s\n','X')
+exit
+end
+
+
+
+
 
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 //                 Quality Check                   
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 negpro=[];qlty_ok=[];
 for i=1:size(ALPHA_A,2)
-    ind=find(ALPHA_A(1:1000/vresol,i)<0 | SA(i)<5 | SA(i)>149 )
+    ind=find(ALPHA_A(1:1000/vresol,i)<0 | SA(i)<5 | SA(i)>149 );
     if length(ind)>0 then
-        negpro=[negpro,i]
+        negpro=[negpro,i];
     else
-        ind=find(ALPHA_A(:,i)>2 | ALPHA_A(:,i)<-0.5)
+        ind=find(ALPHA_A(:,i)>2 | ALPHA_A(:,i)<-0.5);
         if length(ind)>0 then
-             negpro=[negpro,i]
+             negpro=[negpro,i];
          else
-             qlty_ok=[qlty_ok,i]
+             qlty_ok=[qlty_ok,i];
         end
     end
 end
@@ -342,7 +547,7 @@ SA(negpro)=%nan;
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 
 
-pr2=pr2*10^-(-real(power)+1);
+//pr2=pr2*10^-(-real(power)+1);
 
 
 // - - - - - - - - - - - - - - - - - - - - - - - - 
@@ -350,7 +555,7 @@ pr2=pr2*10^-(-real(power)+1);
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 LAY=struct('time',lid_time,'bl',bl','si',si,'tl',tl','nbcld',nbcld','base',BASE2','peak',PEAK2','top',TOP2');
 INV=struct('time',aod_time,'si',SI','aod',aod,'nb_ok',nb_ok','nb_tot',nb_tot','sa',SA','ext',ALPHA_A');
-lid=struct('pr2',pr2,'z',z,'time',lid_time,'vresol',vresol,'theta',theta)
+lid=struct('pr2',pr2,'z',z,'time',lid_time,'vresol',vresol,'theta',theta,'sci',lid.sci)
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 

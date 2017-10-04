@@ -1,4 +1,4 @@
-function[lid_site,lid_file,lid_data,lid_var,aer_site,lambda,zmin,extrap_typ,width_f,nprol,width_wave,thr_cloud,zmin_bl,zmax_bl,zmax_tl,nproc,thr1,thr2,z1,z2,ntime,beta_a_zref,theta,min_pr2,max_pr2,min_ext,max_ext,min_aod,max_aod,fmt]=param_read(site)
+function[lid_site,lid_file,lid_data,lid_var,aer_site,lambda,zmin,extrap_typ,width_f,nprol,width_wave,thr_cloud,zmin_bl,zmax_bl,zmax_tl,nproc,thr1,thr2,z1,z2,ntime,beta_a_zref,theta,min_pr2,max_pr2,min_ext,max_ext,min_aod,max_aod,fmt,patch_ceilo]=param_read(site)
 //Read parameters file for site
 //
 
@@ -7,7 +7,7 @@ function[lid_site,lid_file,lid_data,lid_var,aer_site,lambda,zmin,extrap_typ,widt
 //params=read_csv(strcat([path_parameters,site,'-parameters.txt']),"\t");
 params=mgetl(strcat([path_parameters,site,'-parameters.txt']));
 
-for nl=2:38
+for nl=2:40
     line=tokens(params(nl));
     if size(line,1)>=2
         param=line(2);
@@ -43,8 +43,10 @@ for nl=2:38
         case 36 then min_aod=param;
         case 37 then max_aod=param;
         case 38 then fmt=param;
+        case 40 then patch_ceilo=param;
     end
 end
+
 // - - - - - - - - - - - - - - - - - - - - - - - -
 
 endfunction

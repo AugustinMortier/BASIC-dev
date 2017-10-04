@@ -10,10 +10,10 @@ try
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 //              Parameters File Reading            
 // - - - - - - - - - - - - - - - - - - - - - - - - 
-[lid_site,lid_file,lid_data,lid_var,aer_site,lambda,zmin,extrap_typ,width_f,nprol,width_wave,thr_cloud,zmin_bl,zmax_bl,zmax_tl,nproc,thr1,thr2,z1,z2,ntime,beta_a_zref,theta,min_pr2,max_pr2,min_ext,max_ext,min_aod,max_aod,fmt]=param_read(site);
+[lid_site,lid_file,lid_data,lid_var,aer_site,lambda,zmin,extrap_typ,width_f,nprol,width_wave,thr_cloud,zmin_bl,zmax_bl,zmax_tl,nproc,thr1,thr2,z1,z2,ntime,beta_a_zref,theta,min_pr2,max_pr2,min_ext,max_ext,min_aod,max_aod,fmt,patch_ceilo]=param_read(site);
 // - - - - - - - - - - - - - - - - - - - - - - - - 
 // - - - - - - - - - - - - - - - - - - - - - - - - 
-params=struct("lid_site",lid_site,"lid_file",lid_file,"lid_data",lid_data,"lid_var",lid_var,"aer_site",aer_site,"lambda",lambda,"zmin",zmin,"extrap_typ",extrap_typ,"width_f",width_f,"nprol",nprol,"width_wave",width_wave,"thr_cloud",thr_cloud,"zmin_bl",zmin_bl,"zmax_bl",zmax_bl,"zmax_tl",zmax_tl,"nproc",nproc,"thr1",thr1,"thr2",thr2,"z1",z1,"z2",z2,"ntime",ntime,"beta_a_zref",beta_a_zref,"theta",theta,"min_pr2",min_pr2,"max_pr2",max_pr2,"min_ext",min_ext,"max_ext",max_ext,"min_aod",min_aod,"max_aod",max_aod,"fmt",fmt)
+params=struct("lid_site",lid_site,"lid_file",lid_file,"lid_data",lid_data,"lid_var",lid_var,"aer_site",aer_site,"lambda",lambda,"zmin",zmin,"extrap_typ",extrap_typ,"width_f",width_f,"nprol",nprol,"width_wave",width_wave,"thr_cloud",thr_cloud,"zmin_bl",zmin_bl,"zmax_bl",zmax_bl,"zmax_tl",zmax_tl,"nproc",nproc,"thr1",thr1,"thr2",thr2,"z1",z1,"z2",z2,"ntime",ntime,"beta_a_zref",beta_a_zref,"theta",theta,"min_pr2",min_pr2,"max_pr2",max_pr2,"min_ext",min_ext,"max_ext",max_ext,"min_aod",min_aod,"max_aod",max_aod,"fmt",fmt,"patch_ceilo",patch_ceilo)
 //aug_params = params
 //save('aug_params.sod', aug_params)
 //clear aug_params
@@ -36,6 +36,15 @@ try
 // output : pr2,time,z,lambda
 //[lid_time,pr2,z,theta,vresol]=lid_read(params.lid_site,params.lid_file,params.lid_data,year,month,day);
 [lid_time,pr2,z,vresol]=lid_read_ascii(params.lid_site,params.lid_file,params.lid_var,year,month,day);
+sci=zeros(lid_time);
+
+// - - patch - - 
+[tmax,imax]=max(lid_time);
+lid_time=lid_time(1:imax);
+pr2=pr2(:,1:imax);
+sci=sci(1:imax);
+// - - patch - - 
+
 mprintf('%s\n','√')
 catch
 mprintf('%s\n','X')
@@ -43,7 +52,7 @@ exit
 end
 
 // - - - - - - - - - - - - - - - - - - - - - - - -
-lid=struct("time",lid_time,"pr2",pr2,"z",z,"theta",theta,"vresol",vresol);
+lid=struct("time",lid_time,"pr2",pr2,"z",z,"theta",theta,"vresol",vresol,"sci",sci);
 //aug_lid = lid
 //save('aug_lid.sod', aug_lid)
 //clear aug_lid

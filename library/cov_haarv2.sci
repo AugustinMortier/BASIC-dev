@@ -76,17 +76,18 @@ for i=1:size(PR2,2)
     if length(ind)>0 then
         if ind(1)<=iblmax then
             [val,bl(i)]=max(con(iblmin:ind(1)-1));
-            bl(i)=bl(i)+iblmin;
         else
             [val,bl(i)]=max(con(iblmin:iblmax));
-            bl(i)=bl(i)+iblmin;
         end
     else
         [val,bl(i)]=max(con(iblmin:iblmax));
-        bl(i)=bl(i)+iblmin;
     end
-    
-    bl(i)=bl(i)-a/2;
+    if val>1.5 then
+        bl(i)=bl(i)+iblmin;
+        bl(i)=bl(i)-a/2;
+    else
+        bl(i)=%nan;
+    end
     
     // - - - - - - - - - - - - - - - - - - - - - - - - 
     //if cloud detected, zmax has to be under the base

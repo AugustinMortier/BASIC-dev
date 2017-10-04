@@ -15,10 +15,15 @@ LAY.peak(isnan(LAY.peak))=flag;
 LAY.top(isnan(LAY.top))=flag;
 LAY.bl(isnan(LAY.bl))=flag;
 LAY.tl(isnan(LAY.tl))=flag;
-pathout=strcat([path_out,site,'/',year,month,'/',day,'/',inv_mod,'/']);
+if inv_mod=='sa' then
+    pathout=strcat([path_out,site,'/',year,month,'/',day,'/',inv_mod,'_',string(sa_apriori),'/']);
+else
+    pathout=strcat([path_out,site,'/',year,month,'/',day,'/',inv_mod,'/']);
+end
+//pathout=strcat([path_out,site,'/',year,month,'/',day,'/sa_50/']);
 mkdir(pathout)
 filout1=strcat([pathout,site,year,month,day,'_LAY'])
-header=['Time(UT)','SI','Bl(km)','TL(km)','Nb_cloud','Base1','Base2','Base3','Base4','Base5','Base6','Base7','Base8','Base9','Base10','Peak1','Peak2','Peak3','Peak4','Peak5','Peak6','Peak7','Peak8','Peak9','Peak10','Top1','Top2','Top3','Top4','Top5','Top6','Top7','Top8','Top9','Top10'];
+header=['Time(UT)','SI','Bl(m)','TL(m)','Nb_cloud','Base1','Base2','Base3','Base4','Base5','Base6','Base7','Base8','Base9','Base10','Peak1','Peak2','Peak3','Peak4','Peak5','Peak6','Peak7','Peak8','Peak9','Peak10','Top1','Top2','Top3','Top4','Top5','Top6','Top7','Top8','Top9','Top10'];
 OUT=[LAY.time,LAY.si,LAY.bl,LAY.tl,LAY.nbcld,LAY.base,LAY.peak,LAY.top];
 fmt_header=strcat([repmat('%s\t',1,size(header,2)),'\n']);
 fmt_out=strcat(['%4.2f\t','%6.4f\t','%5.2f\t','%5.2f\t','%i\t',repmat(['%6.4f\t'],1,3*10),'\n'])

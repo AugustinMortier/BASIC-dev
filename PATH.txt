@@ -1,7 +1,7 @@
-/Users/mortier/Desktop/BASIC_work/git/BASIC/parameters/
-/Users/mortier/Desktop/BASIC_work/git/BASIC/library/
-/Users/mortier/Desktop/BASIC_work/git/BASIC/data/LID/
-/Users/mortier/Desktop/BASIC_work/git/BASIC/data/AER/
-/Users/mortier/Desktop/BASIC_work/git/BASIC/out/
-/Users/mortier/Desktop/BASIC_work/git/BASIC/fig/
+/home/augustinm/Desktop/Dev/BASIC/parameters/
+/home/augustinm/Desktop/Dev/BASIC/library/
+/disk1/augustinm/Data/Lidar/
+/disk1/augustinm/Data/Sunphotometer/Aeronet/
+/disk1/augustinm/BASIC_out/out/
+/disk1/augustinm/BASIC_out/fig/
 

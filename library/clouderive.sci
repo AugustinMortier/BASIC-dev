@@ -20,6 +20,8 @@ errcatch(-1,"continue")
 
 vresol=z(2)-z(1);
 imin=zmin/vresol;
+//maj 01/10/2014
+imin=5;
 
 //test
 //PR2=PR2+min(PR2);

@@ -169,6 +169,53 @@ drawnow()
 
 
 
+//* * * * * * * * * * * * * * * * * * * * * * * * *
+//                   SCI INDEX                    
+//* * * * * * * * * * * * * * * * * * * * * * * * *
+fig=7;
+scf(fig);clf(fig);
+drawlater()
+f=gcf();a=gca();
+f.figure_size=[900,400];
+cmap=[name2rgb('white');name2rgb('blue');name2rgb('pink');name2rgb('lightblue');name2rgb('orange')]/255;
+f.color_map=cmap;
+fmt_ok=strcat(['%i'])
+Min=0;Max=4
+colorbar(Min,Max)
+//drawlater()
+xtitle('','$Time\ (UT)$','$SCI$')
+f.figure_size=[900,200];
+a.x_label.font_size=4;a.y_label.font_size=4;
+a.margins=[0.085,0.15,0.05,0.15];
+//a.box='on';
+for i=1:length(lid.sci)
+    plot([lid.time(i),lid.time(i)],[0:1])
+    a.children(1).children.foreground=lid.sci(i)+1;
+    
+    plot([LAY.time(i),LAY.time(i)],[1:2])
+    if LAY.nbcld(i)<>0 then
+        if LAY.base(i,1)>lid.z(1) then
+            a.children(1).children.foreground=color('gray');
+        else
+            a.children(1).children.foreground=color('black');
+        end
+    else
+        a.children(1).children.foreground=1;
+    end
+    
+end
+//a.children.children.thickness=2;
+drawnow()
+a.data_bounds(3)=0;a.data_bounds(4)=2;
+f.children(1).margins=[0.40,0.45,-0.2,0.4]
+//f.children($).margins=[0.075,0.0025,0.05,0.15]
+f.children($).margins=[0.10,0.0025,0.05,0.45];
+if vers<=5.3 then
+    a.sub_ticks=[4,0];
+end
+// * * * * * * * * * * * * * * * * * * * * * * * * *
+
+
 
 
 
@@ -561,6 +608,8 @@ case 'bmp' then
     xs2bmp(4,strcat([figout,'INVALL-',site,'-',year,month,day,'.bmp']))
     xs2bmp(5,strcat([figout,'INVAER-',site,'-',year,month,day,'.bmp']))
     xs2bmp(6,strcat([figout,'SI-',site,'-',year,month,day,'.bmp']))
+    xs2bmp(7,strcat([figout,'SCI-',site,'-',year,month,day,'.bmp']))
+
 case 'jpg' then
     xs2jpg(2,strcat([figout,'LAY-',site,'-',year,month,day,'.jpg']))
     scf(2);f=gcf();
@@ -570,6 +619,8 @@ case 'jpg' then
     xs2jpg(3,strcat([figout,'EXTSA-',site,'-',year,month,day,'.jpg']))
     xs2jpg(4,strcat([figout,'INVALL-',site,'-',year,month,day,'.jpg']))
     xs2jpg(5,strcat([figout,'INVAER-',site,'-',year,month,day,'.jpg']))
+    xs2jpg(6,strcat([figout,'SI-',site,'-',year,month,day,'.jpg']))
+    xs2jpg(7,strcat([figout,'SCI-',site,'-',year,month,day,'.jpg']))
 case 'png' then
     xs2png(2,strcat([figout,'LAY-',site,'-',year,month,day,'.png']))
     scf(2);f=gcf();
@@ -579,6 +630,8 @@ case 'png' then
     xs2png(3,strcat([figout,'EXTSA-',site,'-',year,month,day,'.png']))
     xs2png(4,strcat([figout,'INVALL-',site,'-',year,month,day,'.png']))
     xs2png(5,strcat([figout,'INVAER-',site,'-',year,month,day,'.png']))
+    xs2png(6,strcat([figout,'SI-',site,'-',year,month,day,'.png']))
+    xs2png(7,strcat([figout,'SCI-',site,'-',year,month,day,'.png']))
 else
     mprintf('%s\n','Unknown Format')
 end
@@ -586,7 +639,7 @@ end
 mprintf('%s\n','√')
 catch
 mprintf('%s\n','X')
-//abort
+exit
 end
 endfunction
 
